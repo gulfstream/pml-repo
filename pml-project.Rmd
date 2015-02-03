@@ -1,0 +1,87 @@
+---
+output: html_document
+---
+
+### Practical Machine Learning -- Course Project
+
+##### Background
+
+In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+##### Pre-processing
+
+Load libraries.
+```{r}
+library(caret)
+```
+
+Set seed for reproducible results.
+```{r}
+set.seed(1982)
+```
+
+Load the data.
+```{r, cache = TRUE}
+train <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+test <- read.csv("pml-testing.csv", na.strings = c("NA", ""))
+```
+
+Clean the data.
+```{r}
+# Remove columns that are empty in the test set from both train and test sets.
+good <- colSums(is.na(test)) == 0
+train <- train[ , good]
+test <- test[ , good]
+```
+
+Remove unuseful columns.
+```{r}
+train <- train[ , -grep("user_name|X|timestamp|window", names(train))]
+test <- test[ , -grep("user_name|X|timestamp|window", names(test))]
+```
+
+Split the train set: 80% training and 20% testing.
+```{r}
+inTrain <- createDataPartition(y = train$classe, p = 0.80, list = FALSE)
+training <- train[inTrain, ]
+testing <- train[-inTrain, ]
+```
+
+Remove columns whose variables contribute to near zero of the variance.
+```{r}
+nearZeroVar(training)
+# There are none to remove.
+```
+
+
+##### Model Fitting
+
+Fit model using simple cross-validation and random forest method with train().
+```{r, cache = TRUE}
+mycontrol <- trainControl(method = "cv", number = 5)
+fit <- train(classe ~ ., data = training, method = "rf", trControl = mycontrol, 
+             verbose = TRUE)
+```
+
+Results.
+```{r}
+pred  <- predict(fit, testing) 
+confusionMatrix(pred, testing$classe)
+# Out of sample error = 1 - Accuracy = 0.48%
+(1 - 0.9952)*100
+```
+
+
+##### Predictions
+
+Run the model fit on the test set.
+```{r}
+answers <- predict(fit, test)
+answers
+```
